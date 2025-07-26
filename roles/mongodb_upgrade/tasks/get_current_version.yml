@@ -1,0 +1,22 @@
+---
+- name: Get current MongoDB version from a node
+  hosts: mongodb_servers[0]
+  tasks:
+    - name: Execute MongoDB version command
+      community.mongodb.mongodb_command:
+        command: "db.version()"
+        database: "admin"
+      register: mongo_version_output
+
+    - name: Extract MongoDB version
+      set_fact:
+        current_mongo_version: "{{ mongo_version_output.output }}"
+      run_once: yes
+
+    - name: Store current version for rollback
+      copy:
+        content: "rollback_version: {{ current_mongo_version }}"
+        dest: "{{ playbook_dir }}/vars/rollback_version.yml"
+      delegate_to: localhost
+      run_once: yes
+      changed_when: false
