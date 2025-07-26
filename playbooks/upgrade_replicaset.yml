@@ -2,6 +2,8 @@
 - name: Upgrade MongoDB Replica Set
   hosts: mongodb_servers
   serial: 1
+  vars:
+    effective_target_version: "{{ target_version | default(target_mongo_version) }}"
   vars_files:
     - ../group_vars/all.yml
   roles:
