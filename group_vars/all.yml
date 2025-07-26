@@ -2,10 +2,8 @@
 # Настройки MongoDB
 replica_set_name: "rs0"
 
-# Версии по умолчанию
-current_mongo_version: "5.0"
+# Целевая версия по умолчанию
 target_mongo_version: "7.0"
-rollback_version: "6.0"
 
 # Таймауты
 health_check_delay: 30
