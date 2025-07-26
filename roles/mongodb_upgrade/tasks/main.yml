@@ -1,0 +1,42 @@
+---
+- name: Include pre-upgrade checks
+  import_tasks: pre_check.yml
+
+- name: Upgrade Secondary nodes
+  block:
+    - name: Stop mongod
+      ansible.builtin.service:
+        name: mongod
+        state: stopped
+
+    - name: Install new version
+      ansible.builtin.apt:
+        name: "{{ mongo_package }}={{ mongo_version }}"
+        state: present
+        update_cache: yes
+
+    - name: Start mongod
+      ansible.builtin.service:
+        name: mongod
+        state: started
+  when: inventory_hostname != current_primary
+
+- name: Upgrade Primary node
+  block:
+    - name: Step down Primary
+      community.mongodb.mongodb_command:
+        command: "rs.stepDown({{ stepdown_timeout }})"
+        login_host: "{{ ansible_host }}"
+
+    - name: Wait for new Primary election
+      ansible.builtin.wait_for:
+        timeout: "{{ health_check_delay }}"
+
+    - name: Upgrade former Primary
+      ansible.builtin.apt:
+        name: "{{ mongo_package }}={{ mongo_version }}"
+        state: present
+  when: inventory_hostname == current_primary
+
+- name: Include post-upgrade checks
+  import_tasks: post_check.yml
