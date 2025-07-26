@@ -1,0 +1,12 @@
+---
+# Настройки MongoDB
+replica_set_name: "rs0"
+mongo_version: "7.0"
+mongo_package: "mongodb-org"
+
+# Таймауты
+health_check_delay: 30
+stepdown_timeout: 300
+
+# Настройки обновления
+preferred_primary: "mongodb1"  # Опционально
