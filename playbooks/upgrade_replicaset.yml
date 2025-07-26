@@ -1,0 +1,9 @@
+---
+- name: Upgrade MongoDB Replica Set
+  hosts: mongodb_servers
+  serial: 1
+  vars_files:
+    - ../group_vars/all.yml
+  roles:
+    - role: mongodb_upgrade
+      tags: upgrade
