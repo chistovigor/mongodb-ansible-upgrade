@@ -1,0 +1,20 @@
+---
+- name: Rollback MongoDB Upgrade
+  hosts: mongodb_servers
+  vars:
+    mongo_version: "6.0"  # Предыдущая версия
+  tasks:
+    - name: Stop mongod
+      ansible.builtin.service:
+        name: mongod
+        state: stopped
+
+    - name: Install previous version
+      ansible.builtin.apt:
+        name: "mongodb-org={{ mongo_version }}"
+        state: present
+
+    - name: Start mongod
+      ansible.builtin.service:
+        name: mongod
+        state: started
