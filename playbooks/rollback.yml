@@ -1,17 +1,28 @@
 ---
 - name: Rollback MongoDB Upgrade
   hosts: mongodb_servers
-  vars:
-    mongo_version: "6.0"  # Предыдущая версия
+  vars_files:
+    - "{{ playbook_dir }}/vars/rollback_version.yml"
   tasks:
+    - name: Validate rollback version
+      fail:
+        msg: "Rollback version not detected! Run upgrade first to generate version file."
+      when: rollback_version is not defined
+      run_once: yes
+
+    - name: Show rollback version
+      debug:
+        msg: "Выполняется откат к версии {{ rollback_version }}"
+      run_once: yes
+
     - name: Stop mongod
       ansible.builtin.service:
         name: mongod
         state: stopped
 
-    - name: Install previous version
+    - name: Install rollback version
       ansible.builtin.apt:
-        name: "mongodb-org={{ mongo_version }}"
+        name: "mongodb-org={{ rollback_version }}"
         state: present
 
     - name: Start mongod
