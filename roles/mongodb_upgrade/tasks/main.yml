@@ -1,4 +1,20 @@
 ---
+- name: Get current MongoDB version
+  import_tasks: get_current_version.yml
+  tags: always
+
+- name: Set target version fact
+  set_fact:
+    upgrade_version: "{{ target_version | default(target_mongo_version) }}"
+  
+- name: Show versions
+  debug:
+    msg: |
+      Обновление MongoDB:
+      Текущая версия: {{ current_mongo_version }}
+      Целевая версия: {{ upgrade_version }}
+      Версия для отката: {{ current_mongo_version }}
+
 - name: Include pre-upgrade checks
   import_tasks: pre_check.yml
 
@@ -11,7 +27,7 @@
 
     - name: Install new version
       ansible.builtin.apt:
-        name: "{{ mongo_package }}={{ mongo_version }}"
+        name: "mongodb-org={{ upgrade_version }}"
         state: present
         update_cache: yes
 
@@ -34,7 +50,7 @@
 
     - name: Upgrade former Primary
       ansible.builtin.apt:
-        name: "{{ mongo_package }}={{ mongo_version }}"
+        name: "mongodb-org={{ upgrade_version }}"
         state: present
   when: inventory_hostname == current_primary
 
