@@ -147,6 +147,29 @@ ansible-playbook -i inventory.ini playbooks/rollback.yml
 
 Явное сообщение об ошибке, если файл не найден
 
+## Команды для работы с Vault
+Шифрование файла:
+
+bash
+ansible-vault encrypt group_vars/mongodb_servers_vault.yml
+Редактирование зашифрованного файла:
+
+bash
+ansible-vault edit group_vars/mongodb_servers_vault.yml
+Запуск плейбука:
+
+bash
+ansible-playbook playbooks/deploy_monitoring.yml \
+  --ask-vault-pass \
+  -i inventory/production/
+## .gitignore для безопасности
+text
+
+# Исключаем незашифрованные файлы с секретами
+*_unencrypted.yml
+*.vault-password
+
+
 ## Это решение обеспечивает:
 
 полную автоматизацию процесса обновления и отката с интеллектуальным управлением версиями, что особенно важно для production-сред.
