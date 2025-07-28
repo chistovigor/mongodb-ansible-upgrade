@@ -37,7 +37,9 @@ ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml
 
 **Обновление до конкретной версии**
 
-ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml \
+ansible-playbook playbooks/upgrade_replicaset.yml \
+  -i inventory/production/ \
+  --ask-vault-pass \
   -e "target_version=7.0"
 
 ## usage - command sequence
