@@ -1,7 +1,16 @@
 ---
 # Настройки подключения
 mongodb_monitoring_user: "{{ vault_mongodb_monitoring_user }}"
+mongodb_admin_user: "{{ vault_mongodb_admin_user }}"
 mongodb_monitoring_auth_db: "admin"
+mongodb_auth_source: "admin"
+
+# Параметры обновления
+mongodb_package_name: "mongodb-org"
+mongodb_service_name: "mongod"
+upgrade_priority:
+  secondary_first: true
+  delay_between_nodes: 300
 
 # Параметры Zabbix
 zabbix_server: "monitoring.example.com"
