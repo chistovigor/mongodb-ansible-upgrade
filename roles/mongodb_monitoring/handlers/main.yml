@@ -1,0 +1,39 @@
+---
+# Handlers for MongoDB monitoring role
+- name: Restart Zabbix Agent
+  service:
+    name: zabbix-agent
+    state: restarted
+    enabled: yes
+  when: ansible_service_mgr == 'systemd'
+  listen: "zabbix-config-changed"
+
+- name: Reload Zabbix Agent
+  service:
+    name: zabbix-agent
+    state: reloaded
+  when: ansible_service_mgr == 'systemd' and zabbix_agent_supports_reload
+  listen: "zabbix-config-changed"
+
+- name: Rotate MongoDB logs
+  command: logrotate -f /etc/logrotate.d/mongodb-monitoring
+  listen: "logrotate-config-changed"
+
+- name: Flush journalctl logs
+  command: journalctl --rotate --vacuum-time=1s
+  when: ansible_service_mgr == 'systemd'
+  listen: "logrotate-config-changed"
+
+- name: Apply systemd limits
+  systemd:
+    daemon_reload: yes
+  listen: "systemd-limits-changed"
+
+- name: Cleanup temporary files
+  file:
+    path: "/tmp/mongodb_monitoring_{{ item }}"
+    state: absent
+  loop:
+    - "config_cache"
+    - "status_check"
+  listen: "cleanup-resources"
