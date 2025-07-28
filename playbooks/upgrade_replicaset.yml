@@ -1,30 +1,105 @@
 ---
-- name: Upgrade MongoDB Replica Set
+- name: Standard MongoDB Replica Set Upgrade
   hosts: mongodb_servers
-  serial: 1
+  serial: 1  # Последовательное обновление по одному узлу
   vars_files:
     - ../group_vars/mongodb_servers.yml
     - ../group_vars/mongodb_servers_vault.yml
-  
+
+  vars:
+    target_version: "6.0"  # Обязательный параметр
+    health_check_timeout: 600  # Таймаут проверки здоровья (сек)
+
   pre_tasks:
     - name: Validate target version
       fail:
-        msg: "Target version not specified. Use -e target_version=X.Y"
+        msg: "Target version must be specified with -e target_version=X.Y"
       when: target_version is not defined
 
-  roles:
-    - mongodb_upgrade
-  
-  post_tasks:
-    - name: Verify final replica set status
+    - name: Get current MongoDB version
+      shell: |
+        mongo --version | grep -oP 'db version v\K[0-9.]+'
+      register: current_version
+      changed_when: false
+
+  tasks:
+    - name: Verify replica set health
       community.mongodb.mongodb_replicaset_info:
         login_user: "{{ mongodb_admin_user }}"
         login_password: "{{ vault_mongodb_admin_password }}"
         login_host: "{{ inventory_hostname }}"
+      register: rs_status
+      until: rs_status.ok
+      retries: 5
+      delay: 10
+      delegate_to: localhost
+
+    - name: Step down primary if needed
+      community.mongodb.mongodb_replicaset_primary_stepdown:
+        login_user: "{{ mongodb_admin_user }}"
+        login_password: "{{ vault_mongodb_admin_password }}"
+        login_host: "{{ rs_status.primary }}"
+        stepdown_seconds: "{{ health_check_timeout }}"
+      when: inventory_hostname == rs_status.primary
+      delegate_to: localhost
+
+    - name: Stop MongoDB service
+      ansible.builtin.service:
+        name: "{{ mongodb_service_name }}"
+        state: stopped
+
+    - name: Install new version (Debian/Ubuntu)
+      apt:
+        name: "mongodb-org={{ target_version }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Install new version (RHEL/CentOS)
+      yum:
+        name: "mongodb-org-{{ target_version }}"
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Start MongoDB service
+      ansible.builtin.service:
+        name: "{{ mongodb_service_name }}"
+        state: started
+        enabled: yes
+
+    - name: Wait for node recovery
+      community.mongodb.mongodb_replicaset_info:
+        login_user: "{{ mongodb_admin_user }}"
+        login_password: "{{ vault_mongodb_admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+      register: recovery_status
+      until: recovery_status.ok and (recovery_status.myState == 1 or recovery_status.myState == 2)
+      retries: 12
+      delay: 10
+      delegate_to: localhost
+
+    - name: Log upgrade version
+      copy:
+        content: |
+          {{ ansible_date_time.iso8601 }} Upgraded from {{ current_version.stdout }} to {{ target_version }} on {{ inventory_hostname }}
+        dest: "/var/log/mongodb/upgrades/{{ inventory_hostname }}.log"
+        owner: root
+        group: root
+        mode: '0644'
+
+  post_tasks:
+    - name: Verify final cluster status
+      community.mongodb.mongodb_replicaset_info:
+        login_user: "{{ mongodb_admin_user }}"
+        login_password: "{{ vault_mongodb_admin_password }}"
+        login_host: "{{ groups['mongodb_servers'][0] }}"
       register: final_status
       delegate_to: localhost
-      changed_when: false
 
-    - name: Display final status
+    - name: Print upgrade summary
       debug:
-        var: final_status
+        msg: |
+          Upgrade completed on {{ inventory_hostname }}
+          Old version: {{ current_version.stdout }}
+          New version: {{ target_version }}
+          Cluster health: {{ final_status.ok }}
