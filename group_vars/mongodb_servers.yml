@@ -1,0 +1,18 @@
+---
+# Настройки подключения
+mongodb_monitoring_user: "{{ vault_mongodb_monitoring_user }}"
+mongodb_monitoring_auth_db: "admin"
+
+# Параметры Zabbix
+zabbix_server: "monitoring.example.com"
+zabbix_agent_packages:
+  - zabbix-agent2
+
+# Пути для скриптов
+mongodb_scripts_dir: "/opt/zabbix/scripts"
+mongodb_log_dir: "/var/log/zabbix"
+
+# SystemD настройки
+mongodb_systemd_overrides:
+  LimitNOFILE: 64000
+  LimitNPROC: 64000
