@@ -1,25 +1,78 @@
 ---
-- name: Ensure directories exist
+# Main tasks for MongoDB monitoring setup
+- name: Ensure required directories exist
   file:
     path: "{{ item }}"
     state: directory
     owner: zabbix
     group: zabbix
+    mode: "0750"
   loop:
     - "{{ mongodb_scripts_dir }}"
     - "{{ mongodb_log_dir }}"
+    - /etc/zabbix
+  tags:
+    - always
 
 - name: Deploy monitoring scripts
   copy:
     src: "files/{{ item }}"
     dest: "{{ mongodb_scripts_dir }}/{{ item }}"
-    mode: "0750"
-  loop: "{{ lookup('fileglob', 'files/*.sh') | map('basename') | list }}"
-
-- name: Configure credentials
-  template:
-    src: "files/mongodb_creds.conf.j2"
-    dest: "/etc/zabbix/mongodb_creds.conf"
     owner: zabbix
     group: zabbix
-    mode: "0600"
+    mode: "0750"
+  loop:
+    - mongodb_discovery.sh
+    - mongodb_io_wait.sh
+    - mongodb_repl_status.sh
+    - mongodb_connections.sh
+  tags:
+    - scripts
+
+- name: Create encrypted credentials file
+  template:
+    src: templates/mongodb_creds.conf.j2
+    dest: /etc/zabbix/mongodb_creds.conf
+    owner: zabbix
+    group: zabbix
+    mode: "{{ vault_mongodb_creds_mode | default('0600') }}"
+  no_log: true  # Critical for password security
+  tags:
+    - credentials
+
+- name: Deploy Zabbix user parameters
+  template:
+    src: templates/userparameter_mongodb.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.d/userparameter_mongodb.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Zabbix Agent
+  tags:
+    - zabbix-config
+
+- name: Validate monitoring scripts
+  command: "{{ mongodb_scripts_dir }}/{{ item }} --help"
+  register: script_test
+  changed_when: false
+  ignore_errors: yes
+  loop:
+    - mongodb_discovery.sh
+    - mongodb_io_wait.sh
+  tags:
+    - validation
+
+- name: Ensure log rotation is configured
+  template:
+    src: templates/mongodb_logrotate.j2
+    dest: /etc/logrotate.d/mongodb-monitoring
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - logrotate
+
+- name: Flush handlers
+  meta: flush_handlers
+  tags:
+    - always
