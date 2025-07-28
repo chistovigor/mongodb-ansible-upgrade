@@ -162,6 +162,10 @@ ansible-playbook playbooks/rollback.yml \
 # TASK [Show rollback version] *************************************************
 # ok: [mongodb1] => 
 #   msg: Выполняется откат к версии 6.0.5
+
+# Аварийный режим (только для критических ситуаций!)
+ansible-playbook playbooks/rollback.yml -i inventory/ -e "force_rollback=true"
+
 ```
 
 Особенности реализации:
