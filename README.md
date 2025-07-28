@@ -95,8 +95,8 @@ ansible-playbook ansible/playbooks/upgrade_replicaset.yml \
 
 При необходимости - откат:
 
-ansible-playbook ansible/playbooks/rollback.yml \
-  -i ansible/inventory/production/ \
+ansible-playbook playbooks/rollback.yml \
+  -i inventory/production/ \
   --ask-vault-pass
 ```
 
@@ -154,8 +154,8 @@ ansible-playbook ansible/playbooks/upgrade_replicaset.yml \
 #     Версия для отката: 6.0.5
 Откат:
 
-ansible-playbook ansible/playbooks/rollback.yml \
-  -i ansible/inventory/production/ \
+ansible-playbook playbooks/rollback.yml \
+  -i inventory/production/ \
   --ask-vault-pass
 
 # В выводе будет:
