@@ -1,31 +1,89 @@
 ---
-- name: Rollback MongoDB Upgrade
+- name: Safe MongoDB Replica Set Rollback
   hosts: mongodb_servers
+  serial: 1
   vars_files:
-    - "{{ playbook_dir }}/vars/rollback_version.yml"
-  tasks:
-    - name: Validate rollback version
+    - ../group_vars/mongodb_servers.yml
+    - ../group_vars/mongodb_servers_vault.yml
+
+  pre_tasks:
+    - name: Get current installed version
+      shell: |
+        mongo --version | grep -oP 'db version v\K[0-9.]+'
+      register: current_version
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Fail if version detection failed
       fail:
-        msg: "Rollback version not detected! Run upgrade first to generate version file."
-      when: rollback_version is not defined
-      run_once: yes
+        msg: "Cannot determine current MongoDB version"
+      when: current_version.rc != 0
 
-    - name: Show rollback version
-      debug:
-        msg: "Выполняется откат к версии {{ rollback_version }}"
-      run_once: yes
+    - name: Load previous version from upgrade log
+      stat:
+        path: "/var/log/mongodb/upgrades/{{ inventory_hostname }}.log"
+      register: upgrade_log
 
-    - name: Stop mongod
-      ansible.builtin.service:
-        name: mongod
-        state: stopped
+    - name: Extract previous version
+      shell: |
+        grep "Upgraded from" /var/log/mongodb/upgrades/{{ inventory_hostname }}.log | cut -d' ' -f3
+      register: previous_version
+      when: upgrade_log.stat.exists
 
-    - name: Install rollback version
-      ansible.builtin.apt:
-        name: "mongodb-org={{ rollback_version }}"
-        state: present
+    - name: Validate rollback conditions
+      block:
+        - name: Verify previous version exists
+          fail:
+            msg: "No previous version detected in upgrade logs"
+          when: not upgrade_log.stat.exists or previous_version.stdout == ""
 
-    - name: Start mongod
-      ansible.builtin.service:
-        name: mongod
-        state: started
+        - name: Verify rollback is possible
+          fail:
+            msg: |
+              Cannot rollback from {{ current_version.stdout }} to {{ previous_version.stdout }}
+              Only direct version rollback is allowed
+          when: current_version.stdout != previous_version.stdout.split('-')[0]
+      delegate_to: localhost
+
+  tasks:
+    - name: Confirm rollback
+      pause:
+        prompt: |
+          Confirm rollback from {{ current_version.stdout }}
+          to {{ previous_version.stdout }} on {{ inventory_hostname }}?
+          Type 'yes' to continue
+        echo: no
+      register: rollback_confirmation
+      when: not force_rollback
+
+    - name: Perform rollback (Debian/Ubuntu)
+      block:
+        - name: Stop MongoDB
+          service:
+            name: "{{ mongodb_service_name }}"
+            state: stopped
+
+        - name: Install previous version
+          apt:
+            name: "mongodb-org={{ previous_version.stdout }}"
+            state: present
+            force: yes
+
+        - name: Start MongoDB
+          service:
+            name: "{{ mongodb_service_name }}"
+            state: started
+      when:
+        - ansible_os_family == 'Debian'
+        - rollback_confirmation.user_input == 'yes' or force_rollback
+
+    - name: Verify replica set status
+      community.mongodb.mongodb_replicaset_info:
+        login_user: "{{ mongodb_admin_user }}"
+        login_password: "{{ vault_mongodb_admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+      register: post_rollback_status
+      until: post_rollback_status.ok
+      retries: 10
+      delay: 15
+      delegate_to: localhost
