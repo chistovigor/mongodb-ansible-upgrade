@@ -1,4 +1,6 @@
 ---
+vault_mongodb_admin_user: "admin"
+vault_mongodb_admin_password: "secure_password"
+vault_zabbix_api_token: "zbx_1234567890"
 vault_mongodb_monitoring_user: "monitor_user"
 vault_mongodb_monitoring_password: "P@ssw0rd123"
-vault_zabbix_api_token: "zbx_1234567890"
