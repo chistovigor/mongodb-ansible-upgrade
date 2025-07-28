@@ -2,10 +2,29 @@
 - name: Upgrade MongoDB Replica Set
   hosts: mongodb_servers
   serial: 1
-  vars:
-    effective_target_version: "{{ target_version | default(target_mongo_version) }}"
   vars_files:
-    - ../group_vars/all.yml
+    - ../group_vars/mongodb_servers.yml
+    - ../group_vars/mongodb_servers_vault.yml
+  
+  pre_tasks:
+    - name: Validate target version
+      fail:
+        msg: "Target version not specified. Use -e target_version=X.Y"
+      when: target_version is not defined
+
   roles:
-    - role: mongodb_upgrade
-      tags: upgrade
+    - mongodb_upgrade
+  
+  post_tasks:
+    - name: Verify final replica set status
+      community.mongodb.mongodb_replicaset_info:
+        login_user: "{{ mongodb_admin_user }}"
+        login_password: "{{ vault_mongodb_admin_password }}"
+        login_host: "{{ inventory_hostname }}"
+      register: final_status
+      delegate_to: localhost
+      changed_when: false
+
+    - name: Display final status
+      debug:
+        var: final_status
