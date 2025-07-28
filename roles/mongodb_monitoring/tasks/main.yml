@@ -1,0 +1,25 @@
+---
+- name: Ensure directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: zabbix
+    group: zabbix
+  loop:
+    - "{{ mongodb_scripts_dir }}"
+    - "{{ mongodb_log_dir }}"
+
+- name: Deploy monitoring scripts
+  copy:
+    src: "files/{{ item }}"
+    dest: "{{ mongodb_scripts_dir }}/{{ item }}"
+    mode: "0750"
+  loop: "{{ lookup('fileglob', 'files/*.sh') | map('basename') | list }}"
+
+- name: Configure credentials
+  template:
+    src: "files/mongodb_creds.conf.j2"
+    dest: "/etc/zabbix/mongodb_creds.conf"
+    owner: zabbix
+    group: zabbix
+    mode: "0600"
