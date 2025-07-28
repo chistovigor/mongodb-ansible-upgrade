@@ -1,0 +1,11 @@
+---
+- name: Deploy MongoDB monitoring
+  hosts: mongodb_servers
+  vars_files:
+    - "{{ playbook_dir }}/../group_vars/mongodb_servers.yml"
+    - "{{ playbook_dir }}/../group_vars/mongodb_servers_vault.yml"
+  
+  tasks:
+    - name: Include monitoring role
+      include_role:
+        name: mongodb_monitoring
