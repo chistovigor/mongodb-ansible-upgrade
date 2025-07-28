@@ -1,0 +1,63 @@
+---
+# Общие настройки для мониторинга MongoDB
+mongodb_monitoring:
+  # Директории и пути
+  scripts_dir: "/opt/zabbix/scripts/mongodb"
+  log_dir: "/var/log/zabbix/mongodb"
+  creds_file: "/etc/zabbix/.mongodb_creds"  # Точка в начале скрывает файл
+  tmp_dir: "/tmp/mongodb_monitoring"
+
+  # Настройки скриптов
+  script_timeout: 30  # Таймаут выполнения скриптов (сек)
+  max_log_size: "10MB"
+  log_retention_days: 7
+
+  # Параметры обнаружения
+  discovery:
+    enabled: true
+    interval: 300  # Интервал обнаружения (сек)
+    include_arbiters: false
+
+# Настройки Zabbix
+zabbix:
+  agent:
+    user: "zabbix"
+    group: "zabbix"
+    config_dir: "/etc/zabbix/zabbix_agentd.d"
+    supports_reload: true  # Поддержка 'systemctl reload'
+    service_name: "zabbix-agent2"  # Для версий Zabbix 6.0+
+
+  # Параметры подключения
+  server: "zabbix.example.com"
+  server_port: 10051
+  timeout: 30
+
+# Настройки логирования
+logging:
+  level: "info"
+  rotate:
+    enabled: true
+    count: 5
+    size: "10M"
+    compression: true
+
+# Параметры аутентификации (переопределяются в vault)
+mongodb_auth:
+  user: "{{ vault_mongodb_mon_user | default('monitor') }}"
+  auth_source: "admin"
+  timeout: 10  # Таймаут подключения (сек)
+
+# Системные ограничения
+system_limits:
+  nofile: 64000
+  nproc: 64000
+  memlock: "unlimited"  # Для версий systemd >= 230
+
+# Теги для выборочного выполнения
+tags:
+  always:
+    - common
+    - validation
+  optional:
+    - full_discovery
+    - extended_metrics
