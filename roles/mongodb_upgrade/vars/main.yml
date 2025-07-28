@@ -1,0 +1,51 @@
+---
+# Default variables for MongoDB Replica Set upgrade
+
+# Package management
+mongodb_package_name: "mongodb-org"
+mongodb_service_name: "mongod"
+
+# Upgrade behavior
+upgrade_priority:
+  secondary_first: true  # Upgrade secondary nodes first
+  delay_between_nodes: 300  # Delay between node upgrades (seconds)
+  stepdown_timeout: 3600  # Stepdown duration for primary (seconds)
+
+# Version management
+mongodb_version_lock: false  # Whether to pin the version after upgrade
+mongodb_repo_url: "https://repo.mongodb.org/apt/ubuntu"
+
+# Connection settings
+mongodb_auth_source: "admin"
+mongodb_connection_timeout: 30
+mongodb_retry_attempts: 3
+mongodb_retry_delay: 10
+
+# Validation parameters
+health_check_retries: 12
+health_check_delay: 10
+replica_set_sync_timeout: 600
+
+# Platform-specific settings
+debian:
+  repo_key: "https://www.mongodb.org/static/pgp/server-6.0.asc"
+  repo_component: "multiverse"
+  repo_arch: "amd64"
+
+redhat:
+  repo_gpgcheck: 1
+  repo_gpgkey: "https://www.mongodb.org/static/pgp/server-6.0.asc"
+
+# Maintenance window (UTC)
+default_maintenance_window:
+  start: "02:00"
+  end: "04:00"
+
+# Logging settings
+upgrade_log_dir: "/var/log/mongodb/upgrades"
+log_retention_days: 7
+
+# Safety checks
+minimum_replica_set_members: 3
+maximum_concurrent_upgrades: 1
+allow_force_upgrade: false
