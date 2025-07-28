@@ -20,8 +20,15 @@ MongoDB Replica Set из 3+ узлов
 
 ## Использование
 
-1. Настроить `inventory.ini` и `group_vars/all.yml`
-2. Запуск обновления:
+### Параметры обновления
+
+- `target_version`: Обязательный параметр (например 6.0)
+- `maintenance_window`: Рекомендуемое время обновления (по умолчанию 02:00-04:00)
+- `force_upgrade`: Принудительное обновление (true/false)
+
+1. Настроить `inventory.ini` и `group_vars/mongodb_servers_vault.yml` - шифрованные пароли,
+`group_vars/mongodb_servers.yml` - основные переменные
+3. Запуск обновления:
 ```bash
 
 **стандартное**
@@ -42,24 +49,55 @@ git clone https://your-repo.git
 cd mongodb-ansible-upgrade
 Настроить инвентарь и переменные:
 
+
+## Инвентарь (`inventory/production/hosts.yml`)
+```yaml
+all:
+  children:
+    mongodb_servers:
+      hosts:
+        mongodb1:
+          ansible_host: 10.0.1.1
+          mongodb_port: 27017
+          mongodb_priority: 10
+        mongodb2:
+          ansible_host: 10.0.1.2
+          mongodb_port: 27017
+          mongodb_priority: 5
+        mongodb3:
+          ansible_host: 10.0.1.3
+          mongodb_port: 27017
+          mongodb_priority: 1
+
+## Зашифровать файл с секретами:
+
 bash
-nano inventory.ini
-nano group_vars/all.yml
+ansible-vault encrypt group_vars/mongodb_servers_vault.yml
+
+## При запуске указывать пароль:
+
+bash
+ansible-playbook playbooks/upgrade_replicaset.yml --ask-vault-pass
+
+## Для автоматизации можно использовать файл с паролем:
+
+bash
+ansible-playbook playbooks/upgrade_replicaset.yml \
+  --vault-password-file .vault_pass
+
 Запустить обновление:
 
-bash
-ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml
-
-or
-
-bash
-ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml \
+```bash
+ansible-playbook ansible/playbooks/upgrade_replicaset.yml \
+  -i ansible/inventory/production/ \
+  --ask-vault-pass \
   -e "target_version=7.0"
 
 При необходимости - откат:
 
-bash
-ansible-playbook -i inventory.ini playbooks/rollback.yml
+ansible-playbook ansible/playbooks/rollback.yml \
+  -i ansible/inventory/production/ \
+  --ask-vault-pass
 ```
 
 Автоматическое определение версий
@@ -67,7 +105,7 @@ ansible-playbook -i inventory.ini playbooks/rollback.yml
 
 Версия для отката: Всегда используется версия, которая была перед обновлением
 
-Целевая версия: Задаётся через переменную target_version или берётся из group_vars/all.yml
+Целевая версия: Задаётся через переменную target_version или берётся из group_vars/mongodb_servers.yml
 
 Файлы версий
 После запуска обновления создаётся vars/rollback_version.yml
@@ -99,8 +137,11 @@ text
 ### Пример выполнения:
 
 **Обновление:**
+
 ```bash
-ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml \
+ansible-playbook ansible/playbooks/upgrade_replicaset.yml \
+  -i ansible/inventory/production/ \
+  --ask-vault-pass \
   -e "target_version=7.0"
 
 # В выводе будет:
@@ -113,8 +154,9 @@ ansible-playbook -i inventory.ini playbooks/upgrade_replicaset.yml \
 #     Версия для отката: 6.0.5
 Откат:
 
-bash
-ansible-playbook -i inventory.ini playbooks/rollback.yml
+ansible-playbook ansible/playbooks/rollback.yml \
+  -i ansible/inventory/production/ \
+  --ask-vault-pass
 
 # В выводе будет:
 # TASK [Show rollback version] *************************************************
