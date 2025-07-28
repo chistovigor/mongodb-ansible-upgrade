@@ -1,7 +1,0 @@
----
-# Настройки MongoDB
-replica_set_name: "rs0"
-
-# Таймауты
-health_check_delay: 30
-stepdown_timeout: 300
