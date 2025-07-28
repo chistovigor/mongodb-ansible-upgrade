@@ -1,0 +1,4 @@
+---
+vault_mongodb_monitoring_user: "monitor_user"
+vault_mongodb_monitoring_password: "P@ssw0rd123"
+vault_zabbix_api_token: "zbx_1234567890"
