@@ -7,7 +7,7 @@
     - ../group_vars/mongodb_servers_vault.yml
 
   vars:
-    target_version: "6.0"  # Обязательный параметр
+    target_version: "8.0"  # Обязательный параметр
     health_check_timeout: 600  # Таймаут проверки здоровья (сек)
 
   pre_tasks:
