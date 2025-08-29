@@ -56,26 +56,6 @@ git clone https://your-repo.git
 cd mongodb-ansible-upgrade
 Настроить инвентарь и переменные:
 
-
-## Инвентарь (`inventory/production/hosts.yml`)
-```yaml
-all:
-  children:
-    mongodb_servers:
-      hosts:
-        mongodb1:
-          ansible_host: 10.0.1.1
-          mongodb_port: 27017
-          mongodb_priority: 10
-        mongodb2:
-          ansible_host: 10.0.1.2
-          mongodb_port: 27017
-          mongodb_priority: 5
-        mongodb3:
-          ansible_host: 10.0.1.3
-          mongodb_port: 27017
-          mongodb_priority: 1
-
 ## Зашифровать файл с секретами:
 
 bash
